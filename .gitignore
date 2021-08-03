@@ -1,4 +1,5 @@
 *
 !.gitignore
 !model.ipynb
+!mixedlm.R
 .Rproj.user
