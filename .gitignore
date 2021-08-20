@@ -2,4 +2,5 @@
 !.gitignore
 !model.ipynb
 !mixedlm.R
+!3D_scatter.html
 .Rproj.user

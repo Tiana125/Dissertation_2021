@@ -1,58 +1,52 @@
+# read cleaned data from pre-processing by python
 df<-read.csv("cleaned_data.csv")
 head(df)
 
+### basic linear model: weight vs number of days
 basic.lm <- lm(weight ~ numdays, data = df)
 summary(basic.lm)
 
-library(ggplot2)  # load the package
-
-(prelim_plot <- ggplot(df, aes(x = numdays, y = weight)) +
+library(ggplot2)  # load ggplot for plotting
+# plot linear line with data, 95% confidence interval
+prelim_plot <- ggplot(df, aes(x = numdays, y = weight)) +
     geom_point() +
-    geom_smooth(method = "lm"))
+    geom_smooth(method = "lm") 
 
-plot(basic.lm, which = 1) 
-plot(basic.lm, which = 2) 
+plot(basic.lm, which = 1) # residual vs fitted
+plot(basic.lm, which = 2) # normal q-q
 
-
-df <- df[-c(15, 23), ]
-
-
-aov1 <- aov(weight ~ activity*THI, data=df)
+### two-way ANOVA 
+# test interaction (hence *, not + between variables)
+aov1 <- aov(weight ~ activity*THI, data=df) 
 summary(aov1)
 
 
-
-#define intercept-only model
+### stepwise regression
+#define intercept-only model (minimal model)
 intercept_only <- lm(weight ~ 1, data=df)
-
-#define model with all predictors
+#define model with all predictors (maximal model)
 all <- lm(weight ~ activity + THI + numdays, data=df)
 
-#perform forward stepwise regression
+#perform forward stepwise 
 forward <- step(intercept_only, direction='forward',
                 scope=formula(all), trace=0,k=log(nrow(df)))
 #view results of forward stepwise regression
 forward$anova
 forward$coefficients
 
-
+#perform backward stepwise 
 backward <- step(all, direction='backward', scope=formula(all), trace=0,k=log(nrow(df)))
 #view results of backward stepwise regression
 backward$anova
 backward$coefficients
 
 
-
-hist(df$numdays)
-# df$numdays <- scale(df$numdays, center = TRUE, scale = TRUE)
-
-
-
-
-
+### TVEM
+# treat all data as one subject, hence add the same ID
 df$id = array(1:1, dim=c(nrow(df),1))
 library(tvem)
-set.seed(42)
+# for reproducible results
+set.seed(25)
 
 # select number of knots
 model1_selected_knots <- select_tvem(data=df,
@@ -62,7 +56,7 @@ model1_selected_knots <- select_tvem(data=df,
                                      use_bic=TRUE,
                                      max_knots=5,
                                      keep_going_if_too_few=TRUE)
-plot(model1_selected_knots)
+# fit model with number of knots generated above
 model1 <- tvem(data=df,
                formula=weight~THI+activity,
                id=id,
@@ -77,7 +71,7 @@ model1 <- tvem(data=df,
 # par(mar = c(5.1, 4.1, 4.1, 2.1))
 plot(model1)
 
-#plot shows activity is time varying but THI is not
+#re-select model with THI as time-invariant 
 model2_selected_knots <- select_tvem(data=df,
                                      formula = weight~1,
                                      id=id,
@@ -86,7 +80,7 @@ model2_selected_knots <- select_tvem(data=df,
                                      use_bic=TRUE,
                                      max_knots=5,
                                      keep_going_if_too_few=TRUE)
-
+# fit and plot again
 model2 <- tvem(data=df,
                formula=weight~activity,
                id=id,
@@ -95,12 +89,14 @@ model2 <- tvem(data=df,
                time=numdays)
 plot(model2)
 
+
+# output citations for library
 library(citation)
 citation("tvem")
 
 
 
-
+# The rest is not implemented
 # also tried mixedlm
 # turned out doesnt work due to only one level
 # (colour_plot <- ggplot(df, aes(x = numdays, y = weight, colour = THI)) +
